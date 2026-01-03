@@ -4,7 +4,8 @@ export enum OrderStatus {
     PENDING = 'pending',
     SHIPPED = 'shipped',
     DELIVERED = 'delivered',
-    CANCELLED = 'cancelled'
+    CANCELLED = 'cancelled',
+    PROCESSING = 'processing'
 }
 
 export interface IOrder extends Document {

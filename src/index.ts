@@ -9,7 +9,8 @@ import orderRouter from "./routes/orders.routers";
 import paymentRouter from "./routes/payment.router";
 import libraryRouter from "./routes/library.router";
 import aiRouter from "./routes/ai.router";
-// import { error } from "console"
+import dashboardRouter from "./routes/dashboard.router";
+import cors from "cors";
 dotenv.config()
 
 const MONGO_URI = process.env.MONGO_URI as string
@@ -18,17 +19,25 @@ const PORT = process.env.PORT
 const app = express()
 
 // Connect Redis on startup (once)
-export const initRedis = async () => {
-  try {
-    await getRedisClient();
-    console.log("Redis ready");
-  } catch (err) {
-    console.error("Redis connection failed:", err);
-    process.exit(1); // exit if Redis is critical
-  }
-};
+// export const initRedis = async () => {
+//   try {
+//     await getRedisClient();
+//     console.log("Redis ready");
+//   } catch (err) {
+//     console.error("Redis connection failed:", err);
+//     process.exit(1); // exit if Redis is critical
+//   }
+// };
  
 
+
+const allowedOrigins = ['http://localhost:8080']; // add your allowed origins here
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 
 app.use(express.json())
@@ -39,7 +48,7 @@ app.use("/api/v1/order", orderRouter);
 app.use("/api/v1/payment", paymentRouter);
 app.use("/api/v1/library", libraryRouter);
 app.use("/api/v1/ai", aiRouter); 
-
+app.use("/api/v1/dashboard", dashboardRouter);
 
 mongoose
     .connect(MONGO_URI)

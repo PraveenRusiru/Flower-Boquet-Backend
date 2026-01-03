@@ -1,13 +1,14 @@
 import { Router } from "express";
 
-import { creeateOrder, getAllOrders, deleteOrder, getOrders, updateOrderStatus } from "../controller/order.controller";
+import { creeateOrder, getAllOrders, getOrders, updateOrderStatus } from "../controller/order.controller";
+import { authenticate } from "../middleware/auth";
 
 const orderRouter = Router();
 
-orderRouter.post("/create", creeateOrder);
-orderRouter.post("/get", getOrders);
-orderRouter.put("/updatestatus", updateOrderStatus);
-orderRouter.delete("/delete", deleteOrder);
-orderRouter.get("/all", getAllOrders);
+orderRouter.post("/create",creeateOrder);
+orderRouter.post("/get", authenticate,getOrders);
+orderRouter.put("/updatestatus", authenticate, updateOrderStatus);
+// orderRouter.delete("/delete", authenticate, deleteOrder);
+orderRouter.get("/all", authenticate, getAllOrders);
 
 export default orderRouter;

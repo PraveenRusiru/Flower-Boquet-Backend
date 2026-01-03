@@ -2,17 +2,18 @@ import { Request, Response } from "express";
 import PaymentModel from "../model/payment.modal";
 
 export const processPayment = async (req: Request, res: Response) => {
-    const { orderId, amount, discount, status, paymentMethod } = req.body;
+    const { orderId, amount, discount, paymentMethod } = req.body;
     // Payment processing logic would go here
-    if (!orderId || !amount || !discount || !paymentMethod) {
-        return res.status(400).json({ message: "Missing required payment fields" });
+    console.log(!orderId, !amount, discount, !paymentMethod);
+    if (!orderId || !amount || discount === undefined || !paymentMethod) {
+        return res.status(400).json({ message: "Missing required payment fields",orderId, amount, discount, paymentMethod });
     }
     // Simulate payment processing
     const paymentResult = {
         orderId,
         amount,
-        discount: discount || 0,
-        status: status || "PENDING",
+        discount,
+        status: "PENDING",
         paymentMethod,
         createdAt: new Date(),
         updatedAt: new Date()

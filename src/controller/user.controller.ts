@@ -1,11 +1,12 @@
 import { Request ,Response } from "express"
 import User from "../model/user.Modal"
 import bcrypt from 'bcryptjs'
+import jwt from "jsonwebtoken"
 import { signAccessToken, signRefreshToken } from "../util/token"
 import { AuthRequest } from "../middleware/auth"
 import { sendEmail } from "../util/mail"
-import { saveOTP ,getOTP} from "../util/generateOTP"
 
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESHSECRET as string
 
 export const registerUser = async (req: Request, res: Response) => {
     try {
@@ -39,7 +40,7 @@ export const registerUser = async (req: Request, res: Response) => {
                     html: `<h1>Hi ${name}</h1><p>Thanks for registering!</p>`,
                 })
         res.status(200).json({
-            message: "User resgitered successfully",
+            message: "User registered successfully",
             data:user
         })
 
@@ -54,8 +55,8 @@ export const registerUser = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
     try{const { email, password } = req.body
-        const existEmail = await User.findOne({ email })
-        if (!existEmail) {
+        const user = await User.findOne({ email })
+        if (!user) {
             return   res.status(400).json({
                 message:"Email not registered"
             })
@@ -65,8 +66,8 @@ export const login = async (req: Request, res: Response) => {
                 message:"Password required"
             })
         }
-        const valid = await bcrypt.compare(password, existEmail?.password)
-
+        const valid = await bcrypt.compare(password, user?.password)
+        console.log("user", user)
         if (!valid) {
             return res.status(400).json({
                 message:"Password and email don't match or password incorrect"
@@ -74,8 +75,8 @@ export const login = async (req: Request, res: Response) => {
 
         }
 
-        const accessToken = signAccessToken(existEmail)
-        const refreshToken = signRefreshToken(existEmail)
+        const accessToken = signAccessToken(user)
+        const refreshToken = signRefreshToken(user)
         
 
         await sendEmail({
@@ -99,6 +100,7 @@ export const UpdateUser = async(req: Request, res: Response) => {
             message:"Fields can't be empty"
         })
     }
+    
     console.log("userid", (req as AuthRequest).user.sub)
     const userId= (req as AuthRequest).user.sub 
     try {
@@ -181,9 +183,21 @@ export const changePassword = async (req: Request, res: Response) => {
 export const requestCode = async (req: Request, res: Response) => {
     const { email } = req.body
     
+    if(!email){
+        return res.status(400).json({
+            message:"Email is required"
+        })
+    }
+    const user =await User.findOne({email})
+    if(!user){
+        return res.status(400).json({
+            message:"Email not registered"
+        })
+    }
+
+
+    const code = await user.generateOTP()
     
-    saveOTP(email)
-    const code = await getOTP(email)
     await sendEmail({
                     to: email,
                     subject: "Logged in to Flower Pots Shop",
@@ -198,18 +212,87 @@ export const requestCode = async (req: Request, res: Response) => {
 export const forgetPasswordVerifyCode = async (req: Request, res: Response) => {
     const { enteredCode ,email} = req.body
 
-    const code = await getOTP(email)
-
-    if (code != enteredCode) {
-        return res.status(400).json(
-            {
-                message:"Invalid code"
-            }
-        )
+    if(!email){
+        return res.status(400).json({
+            message:"Email is required"
+        })
     }
+    const user = await User.findOne({ email }).select('+verificationCode +verificationCodeExpires');
+    if(!user){
+        return res.status(400).json({
+            message:"Email not registered"
+        })
+    }
+
+    const isValid = await user.verifyOTP(enteredCode)
+    if(!isValid){
+        return res.status(400).json({
+            message:"Invalid or expired code"
+        })
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+        password:""
+    },{new:true})
+
     res.status(200).json(
             {
                 message:"Password has been reset"
             }
         )
+}
+
+export const setNewPassword = async (req: Request, res: Response) => {
+    const { email,password,ConfirmPassword } = req.body
+
+    if(!email){
+        return res.status(400).json({
+            message:"Email is required"
+        })
+    }
+    const user = await User.findOne({ email });
+    if(!user){
+        return res.status(400).json({
+            message:"Email not registered"
+        })
+    }
+
+    if (password != ConfirmPassword) {
+        return res.status(400).json({
+             message: "Password doesn't match",
+             
+    })    
+    }
+
+    const hashNewPw = await bcrypt.hash(password, 10)
+    const updatedPw = await User.findByIdAndUpdate(user._id, {
+        password:hashNewPw            
+    },{ new: true, runValidators: true})
+    res.status(200).json({
+        message: "Password updated successfully !",
+        user:updatedPw
+    })
+}
+
+export const handleRefreshToken = async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body
+    if (!refreshToken) {
+      return res.status(400).json({ message: "Token required" })
+    }
+      // import jwt from "jsonwebtoken"
+      console.log("refreshToken", refreshToken)
+    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET)
+      // payload.sub - userID
+      console.log("payload", payload,"sub", payload.sub)
+      const user = await User.findById(payload.sub)
+      console.log("user", user)
+    if (!user) {
+      return res.status(403).json({ message: "Invalid refresh token" })
+    }
+    const accessToken = signAccessToken(user)
+    res.status(200).json({ accessToken })
+  } catch (err) {
+    res.status(403).json({ message: "Invalid or expire token" })
+  }
 }

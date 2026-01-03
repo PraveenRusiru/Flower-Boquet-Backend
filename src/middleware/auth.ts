@@ -28,7 +28,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     try {
         const payload = jwt.verify(token, JWT_ACEESSECRET) as JwtUserPayload
         (req as AuthRequest).user = payload
-        console.log("User verified",(req as AuthRequest).user)
+        console.log("User verified",(req as AuthRequest).user,header)
          next()
     } catch (err) {
         console.error(err)

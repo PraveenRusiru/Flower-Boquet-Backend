@@ -13,17 +13,17 @@ export const signAccessToken = (user: IUser): string => {
         },
         JWT_ACEESSECRET
         , {
-            expiresIn:"30m"
+            expiresIn:"1m"
         }
     ) 
 }
 
 export const signRefreshToken = (user: IUser): string => {
     return jwt.sign({
-            sub:user._id.toString
-    },
-        JWT_REFRESHSECRET,
-        {
-        expiresIn:"7d"
-    }) 
+            sub: user._id.toString()
+        },
+        JWT_REFRESHSECRET
+        , {
+            expiresIn:"7d"
+        }) 
 }

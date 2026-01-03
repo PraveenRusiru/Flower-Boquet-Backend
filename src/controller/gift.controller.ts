@@ -3,9 +3,10 @@ import Gift, { IMediaUrl } from '../model/gift.modal';
 import cloudinary from '../config/cloudinary';
 
 export const createGift = async (req: Request, res: Response) => { 
-    const { name, description, price, colour, size, category, mediaUrl } = req.body;
-    console.log(req.body);
-    if (!name || !description || !size || !colour ) {
+    const { name, description, price, colour, size, category } = req.body;
+    console.log(!name, !description, !price, !colour, !size, !category );
+    
+    if (!name  || !price || !size || !colour || !category || !req.files) {
         return res.status(400).json({ message: "Missing required fields" });
     }
     if(!price || price <= 0){
@@ -94,7 +95,7 @@ export const updateImages = async (req: Request, res: Response) => {
         if (!gift) {
             return res.status(404).json({ message: "Gift not found" });
         }
-        console.log("Gift found:", gift);
+        console.log("Gift found:",gift.mediaUrl);
         const mediaUrls = gift.mediaUrl;
            const files = req.files as Express.Multer.File[] | undefined;
 
@@ -122,20 +123,21 @@ export const updateImages = async (req: Request, res: Response) => {
                 });
             }
         }
-
+        console.log("New media URLs:", newMediaUrls);
         // UPDATE DATABASE with new media
         mediaUrls.push(...newMediaUrls);
         gift.mediaUrl = mediaUrls;
 
-        await gift.save();
-
+         const updatedGift = await Gift.findByIdAndUpdate(giftId, { mediaUrl: mediaUrls }, { new: true });
+        console.log("Gift updated with new images:", updatedGift);
         return res.status(200).json({
             message: "Images updated successfully",
-            gift
+            gift: updatedGift
         });
 
-    }catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
+    } catch (error) {
+        console.error("Error updating images:", error);
+        return res.status(500).json({ message: "Internal server error"+error });
     }
 }
 
@@ -174,3 +176,48 @@ export const deleteImage = async (req: Request, res: Response) => {
         return res.status(500).json({ message: "Delete failed" });
     }
 };
+
+export const getGifts = async (req: Request, res: Response) => { 
+    const { giftId } = req.body;
+    try {
+        const gift = await Gift.findById(giftId);
+        if(!gift){
+            return res.status(404).json({ message: "Gift not found" });
+        }
+        return res.status(200).json(gift);
+    }catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+export const getAllGifts = async (req: Request, res: Response) => { 
+    try {
+        const gifts = await Gift.find();
+        return res.status(200).json(gifts);
+    }catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+export const deleteGift = async (req: Request, res: Response) => { 
+    const { giftId } = req.body;
+    try {
+        const gift = await Gift.findByIdAndDelete(giftId);
+        if(!gift){
+            return res.status(404).json({ message: "Gift not found" });
+        }
+        return res.status(200).json({ message: "Gift deleted successfully" });
+    }catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+export const newArrivals = async (req: Request, res: Response) => { 
+    try {
+        const gifts = await Gift.find().sort({ createdAt: -1 }).limit(10);
+        return res.status(200).json(gifts);
+    }catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
+    }
+
+}
+
+

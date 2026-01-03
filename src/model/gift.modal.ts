@@ -35,7 +35,7 @@ export interface IGift extends Document {
 
 const giftSchema = new Schema<IGift>({
     name: { type: String, required: true },
-    description: { type: String, required: true },
+    description: { type: String, required: false },
     price: { type: Number, required: true },
     colour: { type: String, required: true },
     size: { type: String, enum: Object.values(Size), required: false },

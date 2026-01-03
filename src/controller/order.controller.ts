@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import OrderModel from "../model/Order.modal";
+import Customer from "../model/customer.modal";
+import { sendEmail } from "../util/mail";
 
 export const creeateOrder =async (req: Request, res: Response) => {
     const { customerId, items, totalAmount } = req.body;
@@ -14,13 +16,7 @@ export const creeateOrder =async (req: Request, res: Response) => {
     try { 
         const order = {
             customerId,
-            items: [
-                {
-                    productId: items.productId,
-                    quantity: items.quantity,
-                    price: items.price
-                }
-            ],
+            items,
             totalAmount,
             orderDate: new Date(),
             status: "pending"
@@ -59,31 +55,49 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
             return res.status(404).json({ message: "Order not found" });
         }
         order.status = status;
-        await order.save();
+        const newOrder = await order.save();
+        
+        const cusId = newOrder.customerId;
+        console.log("Customer ID:", cusId);
+        const cus = await Customer.findOne(cusId);
+        
+        const email = cus?.email;
+        console.log("Fetched Customer Email:", cus,email);
+        if (!email) {
+            return res.status(404).json({ message: "Customer email not found" });
+        }
+        console.log("Customer Email:", email);
+        await sendEmail({
+            to: cus.email,
+            subject: "Order Status Updated",
+                html: `<p>Your order with ID: <strong>${orderId}</strong> has been updated to status: <strong>${status}</strong>.</p>`,
+            }
+        );
         return res.status(200).json({ message: "Order status updated successfully", order });
     } catch (error) {
-        return res.status(500).json({ message: "Internal Server Error", error });
+        console.log("Internal Server Error", error);
+        return res.status(500).json({ message: "Internal Server Error"+ error });
     }
 }
-export const deleteOrder = async (req: Request, res: Response) => {
-    const { orderId } = req.body;
-    if (!orderId) {
-        return res.status(400).json({ message: "Order ID is required" });
-    }
-    try {
-        const order = await OrderModel.findByIdAndDelete(orderId);
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-        return res.status(200).json({ message: "Order deleted successfully" });
-    } catch (error) {
-        return res.status(500).json({ message: "Internal Server Error", error });
-    }
-}
+// export const deleteOrder = async (req: Request, res: Response) => {
+//     const { orderId } = req.body;
+//     if (!orderId) {
+//         return res.status(400).json({ message: "Order ID is required" });
+//     }
+//     try {
+//         const order = await OrderModel.findByIdAndDelete(orderId);
+//         if (!order) {
+//             return res.status(404).json({ message: "Order not found" });
+//         }
+//         return res.status(200).json({ message: "Order deleted successfully" });
+//     } catch (error) {
+//         return res.status(500).json({ message: "Internal Server Error", error });
+//     }
+// }
 export const getAllOrders = async (req: Request, res: Response) => {
     try {
         const orders = await OrderModel.find();
-        return res.status(200).json({ orders });
+        return res.status(200).json( orders );
     } catch (error) {
         return res.status(500).json({ message: "Internal Server Error", error });
     }
