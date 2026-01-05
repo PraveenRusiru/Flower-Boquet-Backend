@@ -9,6 +9,6 @@ orderRouter.post("/create",creeateOrder);
 orderRouter.post("/get", authenticate,getOrders);
 orderRouter.put("/updatestatus", authenticate, updateOrderStatus);
 // orderRouter.delete("/delete", authenticate, deleteOrder);
-orderRouter.get("/all", authenticate, getAllOrders);
+orderRouter.get("/all", getAllOrders);
 
 export default orderRouter;

@@ -16,9 +16,9 @@ export enum PaymentStatus {
     FAILED = "FAILED"
 }
 export enum PaymentMethod {
-    CREDIT_CARD = "CREDIT_CARD",
+    CREDIT_CARD = "CARD",
     CASH = "CASH",
-    BANK_TRANSFER = "BANK_TRANSFER"
+    BANK_TRANSFER = "BANK"
 }
 const PaymentSchema = new Schema<PaymentDocument>(
     {

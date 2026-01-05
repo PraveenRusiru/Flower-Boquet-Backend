@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import OrderModel from "../model/Order.modal";
 import Customer from "../model/customer.modal";
 import { sendEmail } from "../util/mail";
+import Gift from "../model/gift.modal";
+import { ObjectId } from "mongodb";
 
 export const creeateOrder =async (req: Request, res: Response) => {
     const { customerId, items, totalAmount } = req.body;
@@ -95,9 +97,55 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 //     }
 // }
 export const getAllOrders = async (req: Request, res: Response) => {
-    try {
-        const orders = await OrderModel.find();
-        return res.status(200).json( orders );
+    type orderItem = {
+        giftName: String,
+        giftQty: Number
+    }
+    type orderDetails = {
+        _id: ObjectId,
+        customerId: ObjectId,
+        items: orderItem[],
+        totalAmount: Number,
+        orderDate: Date,
+        status: String,
+    }
+            try {
+                        const orders = await OrderModel.find();
+
+                const ordersDetails: orderDetails[] = await Promise.all(
+                orders.map(async (order) => {
+                    const itemsDetails: orderItem[] = await Promise.all(
+                    order.items.map(async (item) => {
+                        // If productId is an ObjectId, use findById (recommended)
+                        const gift = await Gift.findById(item.productId);
+
+                        if (!gift) {
+                        // you can throw here and catch above
+                        throw new Error("Gift not found");
+                        }
+
+                        return {
+                        giftName: gift.name,
+                        giftQty: item.quantity,
+                        };
+                    })
+                    );
+
+                    return {
+                    _id: order._id,
+                    customerId: order.customerId,
+                    items: itemsDetails,
+                    totalAmount: order.totalAmount,
+                    orderDate: order.orderDate,
+                    status: order.status,
+                    };
+                })
+                );
+
+                console.log("ordersDetails", ordersDetails);
+
+
+        return res.status(200).json( ordersDetails );
     } catch (error) {
         return res.status(500).json({ message: "Internal Server Error", error });
     }
